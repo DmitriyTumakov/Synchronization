@@ -22,8 +22,25 @@ public class Main {
                 } else {
                     sizeToFreq.replace(repeatFrequency, sizeToFreq.get(repeatFrequency) + 1);
                 }
+                sizeToFreq.notify();
             }
         };
+
+        Thread getLeaderThread = new Thread(() -> {
+            while (!Thread.interrupted()) {
+                synchronized (sizeToFreq) {
+                    try {
+                        sizeToFreq.wait();
+                        int keyValue = getMaxKey();
+                        int maxValue = getMaxValue();
+                        System.out.printf("Самое частое количество повторений в данный момент %d (Встречается %d раз)\n", keyValue, maxValue);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        });
+        getLeaderThread.start();
 
         List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < ROUTE_AMOUNT; i++) {
@@ -31,18 +48,10 @@ public class Main {
             threads.get(i).start();
         }
 
-        int keyValue = 0;
-        int maxValue = 0;
-        for (Integer value : sizeToFreq.values()) {
-            if (value > maxValue) {
-                maxValue = value;
-            }
-        }
-        for (Integer key : sizeToFreq.keySet()) {
-            if (sizeToFreq.get(key).equals(maxValue)) {
-                keyValue = key;
-            }
-        }
+        getLeaderThread.interrupt();
+
+        int keyValue = getMaxKey();
+        int maxValue = getMaxValue();
         System.out.printf("Самое частое количество повторений %d (Встречается %d раз)\n", keyValue , maxValue);
         System.out.println("Другие размеры:");
         for (Integer key : sizeToFreq.keySet()) {
@@ -59,5 +68,31 @@ public class Main {
             route.append(letters.charAt(random.nextInt(letters.length())));
         }
         return route.toString();
+    }
+
+    public static int getMaxKey() {
+        int keyValue = 0;
+        int maxValue = 0;
+        for (Integer value : sizeToFreq.values()) {
+            if (value > maxValue) {
+                maxValue = value;
+            }
+        }
+        for (Integer key : sizeToFreq.keySet()) {
+            if (sizeToFreq.get(key).equals(maxValue)) {
+                keyValue = key;
+            }
+        }
+        return keyValue;
+    }
+
+    public static int getMaxValue() {
+        int maxValue = 0;
+        for (Integer value : sizeToFreq.values()) {
+            if (value > maxValue) {
+                maxValue = value;
+            }
+        }
+        return maxValue;
     }
 }
